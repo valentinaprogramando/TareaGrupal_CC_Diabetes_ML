@@ -5,66 +5,79 @@ import pandas as pd
 import os
 
 app = FastAPI(
-    title="API de Predicción de Diabetes",
-    description="Sistema de detección de riesgo basado en Machine Learning"
+    title="Sistema de Detección de Diabetes",
+    description="API de predicción con soporte para escalado de datos (StandardScaler)",
+    version="1.1.0"
 )
 
-# --- CARGA DEL MODELO ---
-# Usamos una ruta absoluta para evitar confusiones en el servidor
-MODEL_PATH = os.path.join(os.getcwd(), "model.pkl")
+# --- CARGA DE ACTIVOS (Modelo y Escalador) ---
+MODEL_PATH = "model.pkl"
+SCALER_PATH = "scaler.pkl"
+
 model = None
+scaler = None
 
 try:
+    # Cargamos el Modelo
     if os.path.exists(MODEL_PATH):
         model = joblib.load(MODEL_PATH)
-        print("✅ Modelo cargado exitosamente desde:", MODEL_PATH)
+        print("✅ Modelo cargado exitosamente.")
+    
+    # Cargamos el Escalador (Pieza clave para evitar el 'Siempre Riesgo Alto')
+    if os.path.exists(SCALER_PATH):
+        scaler = joblib.load(SCALER_PATH)
+        print("✅ Escalador cargado exitosamente.")
     else:
-        print(f"❌ ERROR: El archivo {MODEL_PATH} no existe en el directorio.")
-except Exception as e:
-    print(f"❌ ERROR CRÍTICO al cargar el modelo: {str(e)}")
+        print("⚠️ Advertencia: No se encontró 'scaler.pkl'. Las predicciones podrían ser incorrectas.")
 
-# --- DEFINICIÓN DE DATOS ---
+except Exception as e:
+    print(f"❌ Error crítico al cargar activos: {str(e)}")
+
+# --- DEFINICIÓN DEL ESQUEMA DE DATOS ---
 class InputData(BaseModel):
-    hba1c: float = Field(..., description="Hemoglobina Glicosilada (4-20%)", ge=0, le=20, example=5.5)
-    glucose_postprandial: int = Field(..., description="Glucosa 2h post comida", ge=0, le=500, example=140)
-    glucose_fasting: int = Field(..., description="Glucosa en ayunas", ge=0, le=500, example=90)
-    age: int = Field(..., description="Edad", ge=0, le=120, example=35)
-    bmi: float = Field(..., description="IMC (Peso/Altura²)", ge=10, le=60, example=24.5)
-    systolic_bp: int = Field(..., description="Presión arterial sistólica", ge=50, le=250, example=120)
-    cholesterol_total: int = Field(..., description="Colesterol total", ge=50, le=500, example=180)
-    physical_activity_minutes_per_week: int = Field(..., description="Ejercicio semanal (min)", ge=0, le=10080, example=150)
+    hba1c: float = Field(..., ge=0, le=20, example=5.5)
+    glucose_postprandial: int = Field(..., ge=0, le=500, example=140)
+    glucose_fasting: int = Field(..., ge=0, le=500, example=90)
+    age: int = Field(..., ge=0, le=120, example=35)
+    bmi: float = Field(..., ge=10, le=60, example=24.5)
+    systolic_bp: int = Field(..., ge=50, le=250, example=120)
+    cholesterol_total: int = Field(..., ge=50, le=500, example=180)
+    physical_activity_minutes_per_week: int = Field(..., ge=0, le=10080, example=150)
 
 # --- RUTAS ---
 @app.get("/")
 def home():
-    """Ruta de verificación de salud para Google Cloud Run"""
     return {
         "status": "online",
-        "model_loaded": model is not None,
-        "message": "API de Predicción de Diabetes funcionando correctamente"
+        "model_ready": model is not None,
+        "scaler_ready": scaler is not None,
+        "message": "API lista para recibir datos en /predict"
     }
 
 @app.post("/predict")
 def predict(data: InputData):
-    """Realiza la predicción basada en los datos del paciente"""
-    if model is None:
-        raise HTTPException(status_code=503, detail="El modelo no está disponible en el servidor.")
+    if model is None or scaler is None:
+        raise HTTPException(status_code=503, detail="El modelo o el escalador no están disponibles.")
     
     try:
-        # Convertir datos a DataFrame con los nombres de columnas correctos
+        # 1. Convertir entrada a DataFrame (Nombres de columnas deben coincidir con el entrenamiento)
         df = pd.DataFrame([data.dict()])
         
-        # Realizar la predicción
-        prediction = model.predict(df)
-        probability = model.predict_proba(df)[0][1] if hasattr(model, "predict_proba") else None
+        # 2. ESCALAR los datos (Esto es lo que corrige el error de 'Riesgo Alto' constante)
+        # El scaler convierte tus números a la escala que el modelo entiende (ej: de 0 a 1)
+        df_scaled = scaler.transform(df)
         
-        # Formatear respuesta
+        # 3. Realizar la predicción
+        prediction = model.predict(df_scaled)
+        probability = model.predict_proba(df_scaled)[0][1] if hasattr(model, "predict_proba") else None
+        
+        # 4. Resultado amigable
         result = "Positivo (Riesgo Alto)" if prediction[0] == 1 else "Negativo (Riesgo Bajo)"
         
         return {
             "prediccion": result,
-            "probabilidad_diabetes": round(float(probability), 4) if probability is not None else "N/A",
-            "status": "success"
+            "probabilidad": round(float(probability), 4) if probability is not None else "N/A",
+            "metodo": "Random Forest + StandardScaler"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en la predicción: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error en el proceso de predicción: {str(e)}")
