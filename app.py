@@ -6,7 +6,7 @@ import pandas as pd
 app = FastAPI()
 
 # Cargar el modelo (asegúrate de que el nombre del archivo sea el correcto)
-model = joblib.load("random_forest_model.pkl")
+model = joblib.load("model.pkl")
 
 class InputData(BaseModel):
     hba1c: float = Field(
