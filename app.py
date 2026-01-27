@@ -5,8 +5,8 @@ import pandas as pd
 import os
 
 app = FastAPI(
-    title="Sistema de Detección de Diabetes",
-    description="API de predicción con soporte para escalado de datos (StandardScaler)",
+    title="ML para Detección de Diabetes",
+    description="API de predicción con soporte para escalado de datos para detectar la probabilidad de tener diabetes utilizando un modelo de ClasificaciónRandom Forest.",
     version="1.1.0"
 )
 
@@ -33,16 +33,56 @@ try:
 except Exception as e:
     print(f"❌ Error crítico al cargar activos: {str(e)}")
 
-# --- DEFINICIÓN DEL ESQUEMA DE DATOS ---
+# - DEFINICIÓN DEL ESQUEMA DE DATOS CON EXPLICACIONES ---
 class InputData(BaseModel):
-    hba1c: float = Field(..., ge=0, le=20, example=5.5)
-    glucose_postprandial: int = Field(..., ge=0, le=500, example=140)
-    glucose_fasting: int = Field(..., ge=0, le=500, example=90)
-    age: int = Field(..., ge=0, le=120, example=35)
-    bmi: float = Field(..., ge=10, le=60, example=24.5)
-    systolic_bp: int = Field(..., ge=50, le=250, example=120)
-    cholesterol_total: int = Field(..., ge=50, le=500, example=180)
-    physical_activity_minutes_per_week: int = Field(..., ge=0, le=10080, example=150)
+    hba1c: float = Field(
+        ..., 
+        description="Hemoglobina Glicosilada (Promedio azúcar 3 meses). Rango normal: 4-5.6%", 
+        ge=0, le=20, 
+        example=5.5
+    )
+    glucose_postprandial: int = Field(
+        ..., 
+        description="Glucosa 2 horas después de comer (mg/dL).", 
+        ge=0, le=500, 
+        example=140
+    )
+    glucose_fasting: int = Field(
+        ..., 
+        description="Glucosa en ayunas (mg/dL).", 
+        ge=0, le=500, 
+        example=90
+    )
+    age: int = Field(
+        ..., 
+        description="Edad del paciente en años.", 
+        ge=0, le=120, 
+        example=35
+    )
+    bmi: float = Field(
+        ..., 
+        description="Índice de Masa Corporal (Peso/Altura²).", 
+        ge=10, le=60, 
+        example=24.5
+    )
+    systolic_bp: int = Field(
+        ..., 
+        description="Presión arterial sistólica (mm Hg).", 
+        ge=50, le=250, 
+        example=120
+    )
+    cholesterol_total: int = Field(
+        ..., 
+        description="Colesterol total (mg/dL).", 
+        ge=50, le=500, 
+        example=180
+    )
+    physical_activity_minutes_per_week: int = Field(
+        ..., 
+        description="Minutos de ejercicio a la semana.", 
+        ge=0, le=10080, 
+        example=150
+    )
 
 # --- RUTAS ---
 @app.get("/")
