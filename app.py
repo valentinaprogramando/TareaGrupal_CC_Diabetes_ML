@@ -22,11 +22,11 @@ try:
     if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
         model = joblib.load(MODEL_PATH)
         scaler = joblib.load(SCALER_PATH)
-        print("✅ Sistema cargado: Modelo + Scaler listos.")
+        print("Sistema cargado: Modelo + Scaler listos.")
     else:
-        print("⚠️ Advertencia: No se encontraron archivos .pkl")
+        print("Advertencia: No se encontraron archivos .pkl")
 except Exception as e:
-    print(f"❌ Error al cargar modelos: {e}")
+    print(f"Error al cargar modelos: {e}")
 
 # 3. Input Data
 class InputData(BaseModel):
@@ -45,24 +45,24 @@ def obtener_explicacion(data: InputData):
     
     # Análisis de HbA1c
     if data.hba1c >= 6.5:
-        razones.append(f"🔴 HbA1c Crítica ({data.hba1c}%) - Rango diabético.")
+        razones.append(f"HbA1c Crítica ({data.hba1c}%) - Rango diabético.")
     elif 5.7 <= data.hba1c < 6.5:
-        razones.append(f"⚠️ HbA1c Elevada ({data.hba1c}%) - Rango de Prediabetes.")
+        razones.append(f"HbA1c Elevada ({data.hba1c}%) - Rango de Prediabetes.")
 
     # Análisis de Glucosa
     if data.glucose_fasting >= 126:
-        razones.append(f"🔴 Glucosa Ayunas Alta ({data.glucose_fasting} mg/dL).")
+        razones.append(f"Glucosa Ayunas Alta ({data.glucose_fasting} mg/dL).")
     elif 100 <= data.glucose_fasting < 126:
-        razones.append(f"⚠️ Glucosa Ayunas Alterada ({data.glucose_fasting} mg/dL).")
+        razones.append(f"Glucosa Ayunas Alterada ({data.glucose_fasting} mg/dL).")
         
     # Análisis de IMC
     if data.bmi >= 30:
-        razones.append(f"⚠️ Obesidad (IMC: {data.bmi}).")
+        razones.append(f"Obesidad (IMC: {data.bmi}).")
     elif 25 <= data.bmi < 30:
-        razones.append(f"ℹ️ Sobrepeso (IMC: {data.bmi}).")
+        razones.append(f"Sobrepeso (IMC: {data.bmi}).")
     
     if not razones:
-        razones.append("✅ No se detectan factores de riesgo individuales críticos.")
+        razones.append("No se detectan factores de riesgo individuales críticos.")
         
     return razones
 
@@ -93,19 +93,19 @@ def predict(data: InputData):
         if probability >= UMBRAL_DIABETES:
             # CASO ROJO: DIABETES
             diagnostico = "Positivo (Diabetes Tipo 2)"
-            nivel_alerta = "ALTA 🔴"
+            nivel_alerta = "ALTA"
             mensaje = "El modelo detecta patrones clínicos consistentes con diabetes."
             
         elif probability >= UMBRAL_PREDIABETES:
             # CASO AMARILLO: PREDIABETES (El nuevo punto medio)
             diagnostico = "Alerta: Prediabetes / Riesgo Elevado"
-            nivel_alerta = "MEDIA ⚠️"
+            nivel_alerta = "MEDIA"
             mensaje = "Zona de riesgo detectada. Se sugiere revisión médica preventiva."
             
         else:
             # CASO VERDE: SANO
             diagnostico = "Negativo (Sano)"
-            nivel_alerta = "BAJA 🟢"
+            nivel_alerta = "BAJA"
             mensaje = "No se detectan patrones de riesgo significativos."
 
         # D. Generar Explicación
