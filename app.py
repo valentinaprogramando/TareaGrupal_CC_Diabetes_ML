@@ -66,6 +66,20 @@ def obtener_explicacion(data: InputData):
         
     return razones
 
+
+# 4. Endpoint de Health Check
+@app.get("/health")
+def health_check():
+    return {
+        "status": "online",
+        "service": "diabetes-prediction-api",
+        "version": "3.0.1"
+        "model_ready": model is not None,
+        "scaler_ready": scaler is not None,
+        "message": "API lista para recibir datos en /predict"
+    }
+
+
 # 5. Endpoint de Predicción Inteligente
 @app.post("/predict")
 def predict(data: InputData):
